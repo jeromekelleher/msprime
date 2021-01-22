@@ -1037,7 +1037,7 @@ def sim_ancestry(
         ``ploidy`` = :math:`k`. See :ref:`sec_ancestry_samples` for further details.
         Either ``samples`` or ``initial_state`` must be specified.
     :param int ploidy: The number of monoploid genomes per sample individual
-        (Default=2). See :ref:`sec_ancestry_samples_ploidy` for usage examples.
+        (Default=2). See :ref:`sec_ancestry_ploidy` for usage examples.
     :param float sequence_length: The length of the genome sequence to simulate.
         See :ref:`sec_ancestry_genome_length` for usage examples
         for this parameter and how it interacts with other parameters.
