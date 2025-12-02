@@ -267,25 +267,17 @@ class TestAlgorithms:
         assert np.sum(node_flags == msprime.NODE_IS_CA_EVENT) > 0
         assert np.sum(node_flags == msprime.NODE_IS_RE_EVENT) > 0
 
-    def test_stop_at_local_mrca_end_time(self):
-        end_time = 100
+    def test_stop_at_local_mrca_multi_tree(self):
         r = 0.1
-        ts = self.run_script(
-            f"10 --continue-after-local-mrca --end-time={end_time} -r {r}"
-        )
-
-        # test that simulations continue for all trees to the end_time
-        old_time = None
+        ts = self.run_script(f"10 --continue-after-local-mrca -r {r}")
+        assert ts.num_trees >= 2
+        # All roots should have the same time
+        root_times = []
         for tree in ts.trees():
-            assert len(tree.roots) == 1  # otherwise the test is not valid
-            u = tree.roots[0]
-            assert tree.time(u) >= end_time
-            if old_time is None:
-                old_time = tree.time(u)
-            # check that end time is the same for all roots
-            assert tree.time(u) == old_time
+            root_times.append(tree.time(tree.root))
+        assert len(set(root_times)) == 1
 
-    def test_stop_at_local_mrca(self):
+    def test_stop_at_local_mrca_single_tree(self):
         ts = self.run_script("10 --continue-after-local-mrca -r 0")
 
         root_times = [tree.time(tree.root) for tree in ts.trees()]

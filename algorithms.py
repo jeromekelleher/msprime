@@ -1322,7 +1322,7 @@ class Simulator:
         potential_destinations = self.get_potential_destinations()
 
         # only worried about label 0 below
-        while len(non_empty_pops) > 0:
+        while any(x > 1 for x in self.S.values()):
             self.verify()
             if self.t >= end_time:
                 break
@@ -1367,9 +1367,7 @@ class Simulator:
                         mig_source = j
                         mig_dest = k
             min_time = min(t_re, t_ca, t_gcin, t_gc_left, t_mig)
-            assert (min_time != INFINITY) or (
-                (min_time == INFINITY) and not self.stop_at_local_mrca
-            )
+            assert min_time != INFINITY
             if self.t + min_time > self.modifier_events[0][0]:
                 t, func, args = self.modifier_events.pop(0)
                 self.t = t
@@ -1383,14 +1381,7 @@ class Simulator:
                 event = "MOD"
             else:
                 self.t += min_time
-                if min_time >= INFINITY:
-                    assert not self.stop_at_local_mrca
-                    event = "END"
-                    if end_time >= INFINITY:
-                        end_time = self.t
-                    else:
-                        self.t = end_time
-                elif min_time == t_re:
+                if min_time == t_re:
                     event = "RE"
                     self.hudson_recombination_event(0)
                 elif min_time == t_gcin:
@@ -2909,6 +2900,8 @@ def run_simulate(args):
     ts.dump(args.output_file)
     if args.verbose:
         s.print_state()
+
+    print(ts.draw_text())
 
 
 def add_simulator_arguments(parser):
