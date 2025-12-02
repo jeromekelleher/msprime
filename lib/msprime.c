@@ -3786,7 +3786,7 @@ msp_merge_two_ancestors(msp_t *self, population_id_t population_id, label_id_t l
     bool defrag_required = false;
     tsk_id_t v;
     double l, r, l_min, r_max;
-    uint32_t min_overlap;
+    uint32_t min_overlap = self->stop_at_local_mrca? 2: 0;
     avl_node_t *node;
     node_mapping_t *nm, search;
     segment_t *x, *y, *z, *alpha, *beta;
@@ -3795,12 +3795,6 @@ msp_merge_two_ancestors(msp_t *self, population_id_t population_id, label_id_t l
     if (new_lineage == NULL) {
         ret = MSP_ERR_NO_MEMORY;
         goto out;
-    }
-
-    if (self->stop_at_local_mrca) {
-        min_overlap = 2;
-    } else {
-        min_overlap = 0;
     }
 
     x = a;
@@ -4090,10 +4084,9 @@ msp_merge_ancestors(msp_t *self, avl_tree_t *Q, population_id_t population_id,
             node = avl_search(&self->overlap_counts, &search);
             tsk_bug_assert(node != NULL);
             nm = (node_mapping_t *) node->item;
+            min_overlap = 0;
             if (self->stop_at_local_mrca) {
                 min_overlap = h;
-            } else {
-                min_overlap = 0;
             }
             if (nm->value == min_overlap) {
                 nm->value = 0;
@@ -5107,6 +5100,26 @@ out:
     return ret;
 }
 
+static bool
+msp_coalescent_is_complete(const msp_t *self)
+{
+    avl_node_t *node;
+    node_mapping_t *nm;
+
+    /* NOTE! This is a quick first implementation. This could be a performance
+     * bottleneck and maybe we keep track of whether there's any non-1 values
+     * instead
+     */
+    for (node = self->overlap_counts.head; node->next != NULL; node = node->next) {
+        nm = (node_mapping_t *) node->item;
+        if (nm->value > 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 /* The main event loop for continuous time coalescent models. Runs until either
  * coalescence; or the time of a simulated event would have exceeded the
  * specified max_time; or for a specified number of events. The num_events
@@ -5142,7 +5155,7 @@ msp_run_coalescent(msp_t *self, double max_time, unsigned long max_events)
         goto out;
     }
 
-    while (msp_get_num_ancestors(self) > 0) {
+    while (!msp_coalescent_is_complete(self)) {
         if (events == max_events) {
             ret = MSP_EXIT_MAX_EVENTS;
             break;
@@ -5212,20 +5225,9 @@ msp_run_coalescent(msp_t *self, double max_time, unsigned long max_events)
         t_wait = GSL_MIN(mig_t_wait,
             GSL_MIN(gc_t_wait, GSL_MIN(gc_left_t_wait, GSL_MIN(re_t_wait, ca_t_wait))));
 
-        if (fixed_event_time == DBL_MAX && t_wait == DBL_MAX
-            && self->stop_at_local_mrca) { // TODO add condition
+        if (fixed_event_time == DBL_MAX && t_wait == DBL_MAX) {
             ret = MSP_ERR_INFINITE_WAITING_TIME;
             goto out;
-        } else if ((fixed_event_time == DBL_MAX && t_wait == DBL_MAX)
-                   && !self->stop_at_local_mrca) {
-
-            if (max_time >= DBL_MAX) {
-                max_time = self->time;
-            } else {
-                self->time = max_time;
-            }
-            ret = MSP_EXIT_COALESCENCE;
-            break;
         }
         random_event_time = self->time + t_wait;
 

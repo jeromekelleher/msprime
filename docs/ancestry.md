@@ -1497,7 +1497,7 @@ might be needed. In this case, we set the parameter `stop_at_local_mrca` of
 ```{code-cell}
 ts = msprime.sim_ancestry(
     2, recombination_rate=0.1, sequence_length=10, random_seed=75,
-    end_time=4, stop_at_local_mrca=False, record_full_arg=True)
+    stop_at_local_mrca=False, record_full_arg=True)
 ts.draw_svg(time_scale='rank')
 ```
 
@@ -1506,7 +1506,11 @@ trees, and we can see, for example, that node 14 is still the ancestor of 11
 in the rightmost tree. This would be not recorded with the default ``stop_at_local_mrca=False``
 because 11 is the root of that tree.
 
-:::{warning}
+The stopping condition remains the same---we keep simulating until an MRCA has been
+found at *all* local trees. The interpretation of the the final "root" nodes
+is a little subtle
+
+:::{note}
 When using the ``stop_at_local_mrca=False`` option you usually need to specify an
 ``end_time`` argument (see {ref}`sec_ancestry_end_time`) or the simulation will
 run indefinitely! It is in general not possible to know what the "right" end
