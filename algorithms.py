@@ -2901,8 +2901,6 @@ def run_simulate(args):
     if args.verbose:
         s.print_state()
 
-    print(ts.draw_text())
-
 
 def add_simulator_arguments(parser):
     parser.add_argument("sample_size", type=int)

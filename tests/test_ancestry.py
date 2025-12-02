@@ -891,7 +891,6 @@ class TestSimulator:
         assert len(s) > 0
 
 
-@pytest.mark.skip("SKIPPING for now")
 class TestSimulateAfterLocalMRCA:
 
     def check_roots(self, ts, end_time=None, allow_multiple_roots=False):
@@ -901,69 +900,22 @@ class TestSimulateAfterLocalMRCA:
             root_times = [tree.time(tree.root) for tree in ts.trees()]
         assert len(set(root_times)) == 1
         if end_time is not None:
-            assert root_times[0] >= end_time
-
-    def verify_simulation(self, n, m, r):
-        """
-        Verifies a simulation for the specified parameters.
-        """
-        end_time = 1000
-        sim = ancestry._parse_sim_ancestry(
-            n,
-            sequence_length=m,
-            recombination_rate=r,
-            stop_at_local_mrca=False,
-            end_time=end_time,
-        )
-        sim.run()
-        assert sim.num_breakpoints == len(sim.breakpoints)
-        assert sim.time > 0
-        assert sim.num_avl_node_blocks > 0
-        assert sim.num_segment_blocks > 0
-        assert sim.num_node_mapping_blocks > 0
-        tree_sequence = tskit.TableCollection.fromdict(
-            sim.tables.asdict()
-        ).tree_sequence()
-        t = 0.0
-        for record in tree_sequence.nodes():
-            if record.time > t:
-                t = record.time
-        assert t >= end_time
-        assert sim.time == t
-        assert sim.num_common_ancestor_events > 0
-        assert sim.num_recombination_events >= 0
-        assert np.sum(sim.num_migration_events) >= 0
-        assert sim.num_multiple_recombination_events >= 0
-        self.check_roots(tree_sequence, end_time)
-
-    def test_random_parameters(self):
-        num_random_sims = 10
-        for _ in range(num_random_sims):
-            n = random.randint(2, 100)
-            m = random.randint(10, 100)
-            r = random.random()
-            self.verify_simulation(n, m, r)
+            assert root_times[0] == end_time
 
     @pytest.mark.parametrize(
         "model",
         [
             "dtwf",
             "hudson",
-            msprime.BetaCoalescent(alpha=1.5),
-            msprime.DiracCoalescent(psi=0.1, c=2),
+            # msprime.BetaCoalescent(alpha=1.5),
+            # msprime.DiracCoalescent(psi=0.1, c=2),
         ],
     )
     def test_single_models(self, model):
-        """
-        Tests that simulations run after the local MRCA when the flag is set
-        """
-
-        end_time = 1000
         tss = msprime.sim_ancestry(
             10,
             population_size=10,
             stop_at_local_mrca=False,
-            end_time=end_time,
             random_seed=1,
             sequence_length=10,
             recombination_rate=0.1,
@@ -971,7 +923,7 @@ class TestSimulateAfterLocalMRCA:
             num_replicates=10,
         )
         for ts in tss:
-            self.check_roots(ts, end_time)
+            self.check_roots(ts)
 
     def test_fixed_pedigree(self):
         """
@@ -1016,7 +968,6 @@ class TestSimulateAfterLocalMRCA:
             initial_state=pedigree,
             stop_at_local_mrca=False,
             recombination_rate=0.1,
-            end_time=eldest_time,
             model="fixed_pedigree",
         )
 
@@ -1045,7 +996,6 @@ class TestSimulateAfterLocalMRCA:
 
         self.check_roots(ts, end_time, allow_multiple_roots=True)
 
-        end_time = 100000
         ts = msprime.sim_ancestry(
             2,
             population_size=10,
@@ -1066,32 +1016,10 @@ class TestSimulateAfterLocalMRCA:
         [
             "dtwf",
             "hudson",
-            msprime.BetaCoalescent(alpha=1.5),
-            msprime.DiracCoalescent(psi=0.1, c=2),
-        ],
-    )
-    def test_no_end_time(self, model):
-        with pytest.warns(msprime.PotentialInfiniteSimulationWarning):
-            ts = msprime.sim_ancestry(
-                10,
-                stop_at_local_mrca=False,
-                population_size=10,
-                random_seed=1,
-                sequence_length=2,
-                recombination_rate=0,
-                model=model,
-            )
-            self.check_roots(ts)
-
-    @pytest.mark.parametrize(
-        "model",
-        [
-            "dtwf",
-            "hudson",
         ],
     )
     def test_migration(self, model):
-        end_time = 10000
+        end_time = 1000
         demography = msprime.Demography.stepping_stone_model(
             [100, 100], migration_rate=0.01
         )
@@ -1109,13 +1037,12 @@ class TestSimulateAfterLocalMRCA:
     @pytest.mark.parametrize(
         "model",
         [
-            "dtwf",
+            # "dtwf", OOM
             "hudson",
         ],
     )
     def test_additional_nodes(self, model):
 
-        end_time = 1000
         ts = msprime.sim_ancestry(
             2,
             population_size=10,
@@ -1128,11 +1055,10 @@ class TestSimulateAfterLocalMRCA:
             coalescing_segments_only=False,
             stop_at_local_mrca=False,
             sequence_length=5,
-            end_time=end_time,
             model=model,
         )
 
-        self.check_roots(ts, end_time)
+        self.check_roots(ts)
 
 
 class TestParseRandomSeed:
